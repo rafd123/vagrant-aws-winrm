@@ -13,14 +13,18 @@ module VagrantPlugins
             secret_access_key = machine.provider_config.secret_access_key 
             credentials       = ::Aws::Credentials.new(access_key_id, secret_access_key)
             region            = machine.provider_config.region
+            region_config     = machine.provider_config.get_region_config(region)
+            endpoint          = region_config.endpoint                        
+            options           = {
+                                  region:          region,
+                                  credentials:     credentials
+                              }
 
-            # Grab the region endpoint explicitly in the event that
-            # a custom endpoint was specified (e.g. OpenStack)            
-            region_config = machine.provider_config.get_region_config(region)
-            endpoint      = region_config.endpoint            
+            # Account for custom endpoints (e.g. OpenStack)   
+            options[:endpoint] = endpoint if endpoint
 
             # Fetch that password data for the instance
-            ec2                 = Aws::EC2::Client.new(region: region, endpoint: endpoint, credentials: credentials)
+            ec2                 = Aws::EC2::Client.new(options)
             password_data       = ec2.get_password_data({ instance_id: machine.id }).password_data
             password_data_bytes = Base64.decode64(password_data)
             
