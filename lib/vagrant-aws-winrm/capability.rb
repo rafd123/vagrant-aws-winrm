@@ -14,7 +14,8 @@ module VagrantPlugins
             # AWS connection info
             access_key_id     = machine.provider_config.access_key_id
             secret_access_key = machine.provider_config.secret_access_key 
-            credentials       = ::Aws::Credentials.new(access_key_id, secret_access_key)
+            session_token     = machine.provider_config.session_token
+            credentials       = ::Aws::Credentials.new(access_key_id, secret_access_key, session_token)
             region            = machine.provider_config.region
             region_config     = machine.provider_config.get_region_config(region)
             endpoint          = region_config.endpoint                        
