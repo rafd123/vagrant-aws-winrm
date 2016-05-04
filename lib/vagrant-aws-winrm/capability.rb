@@ -33,7 +33,7 @@ module VagrantPlugins
           machine = env[:machine]
           aws     = env[:aws_compute]
 
-          response            = aws.get_password_data({ instance_id: machine.id })
+          response            = aws.get_password_data(machine.id)
           password_data       = response.body['passwordData']
           password_data_bytes = Base64.decode64(password_data)
           
