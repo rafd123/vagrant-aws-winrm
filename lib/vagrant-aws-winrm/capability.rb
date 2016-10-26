@@ -35,27 +35,32 @@ module VagrantPlugins
 
           response            = aws.get_password_data(machine.id)
           password_data       = response.body['passwordData']
-          password_data_bytes = Base64.decode64(password_data)
-          
-          # Try to decrypt the password data using each one of the private key files
-          # set by the user until we hit one that decrypts successfully
-          machine.config.ssh.private_key_path.each do |private_key_path|
-            private_key_path = File.expand_path private_key_path
+          if password_data.nil?
+            @logger.info("WinRM password data is nil. Sleeping 1 minute to wait for the password to be available.")
+            sleep(60)
+          else
+            password_data_bytes = Base64.decode64(password_data)
 
-            @logger.info("Decrypting password data using #{private_key_path}")
-            rsa = OpenSSL::PKey::RSA.new File.read private_key_path
-            begin
-              machine.config.winrm.password = rsa.private_decrypt password_data_bytes
-              @logger.info("Successfully decrypted password data using #{private_key_path}")
-            rescue OpenSSL::PKey::RSAError
-              @logger.warn("Failed to decrypt password data using #{private_key_path}")
-              next
+            # Try to decrypt the password data using each one of the private key files
+            # set by the user until we hit one that decrypts successfully
+            machine.config.ssh.private_key_path.each do |private_key_path|
+              private_key_path = File.expand_path private_key_path
+
+              @logger.info("Decrypting password data using #{private_key_path}")
+              rsa = OpenSSL::PKey::RSA.new File.read private_key_path
+              begin
+                machine.config.winrm.password = rsa.private_decrypt password_data_bytes
+                @logger.info("Successfully decrypted password data using #{private_key_path}")
+              rescue OpenSSL::PKey::RSAError
+                @logger.warn("Failed to decrypt password data using #{private_key_path}")
+                next
+              end
+
+              break
             end
-
-            break
           end
 
-          @app.call(env)                   
+          @app.call(env)
         end        
       end        
     end      
