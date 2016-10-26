@@ -12,8 +12,6 @@ module VagrantPlugins
 
         def self.winrm_info(machine)
           if machine.config.winrm.password == :aws
-            machine.ui.info('Getting WinRM password from AWS...')
-
             # Call the VagrantPlugins::AWS::Action::ConnectAWS
             # middleware so we can get acces to the Fog connection
             machine.env.action_runner.run(
@@ -33,9 +31,19 @@ module VagrantPlugins
           machine = env[:machine]
           aws     = env[:aws_compute]
 
-          response            = aws.get_password_data(machine.id)
-          password_data       = response.body['passwordData']
+          @logger.info('Getting WinRM password from AWS...')
+          response      = aws.get_password_data(machine.id)
+          password_data = response.body['passwordData']
+
+          if password_data.nil?
+            @logger.info('WinRM password not available from AWS yet.')
+            @logger.debug("Raising an exception to force a retry.")
+            raise VagrantPlugins::CommunicatorWinRM::Errors::TransientError, error_message: 'WinRM password not available from AWS yet.'          
+          end 
+
           password_data_bytes = Base64.decode64(password_data)
+
+          machine.ui.info('Decrypting WinRM password from AWS...')         
           
           # Try to decrypt the password data using each one of the private key files
           # set by the user until we hit one that decrypts successfully
