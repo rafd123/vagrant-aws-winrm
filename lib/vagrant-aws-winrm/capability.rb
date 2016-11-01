@@ -35,8 +35,13 @@ module VagrantPlugins
 
           response            = aws.get_password_data(machine.id)
           password_data       = response.body['passwordData']
+          if password_data.nil?
+            @logger.debug("WinRM password data is nil. Raising an exception to force a retry.")
+            raise VagrantPlugins::CommunicatorWinRM::Errors::TransientError
+          end
+
           password_data_bytes = Base64.decode64(password_data)
-          
+
           # Try to decrypt the password data using each one of the private key files
           # set by the user until we hit one that decrypts successfully
           machine.config.ssh.private_key_path.each do |private_key_path|
@@ -55,7 +60,7 @@ module VagrantPlugins
             break
           end
 
-          @app.call(env)                   
+          @app.call(env)
         end        
       end        
     end      
