@@ -18,42 +18,43 @@ In your Vagrantfile, ensure you configure values for `aws.keypair_name` and `ssh
 
 When configuring the WinRM credentials, use `Administrator` and `:aws` for the `winrm.username` and `winrm.password`, respectively.
 
+Additionally, you will need to ensure that you set `aws.security_groups` with a Security Group that allows WinRM inbound (port 5985).
+
+Finally, you can leverage `aws.user_data` to ensure that WinRM is enabled and the Windows Firewall is permitting WinRM inbound.
+
 Example:
 
 ```
 Vagrant.configure("2") do |config|
-  
-  # Other stuff
+  # ... other stuff
 
-  config.vm.provider :aws do |aws, override|
-    aws.access_key_id = "YOUR KEY"
-    aws.secret_access_key = "YOUR SECRET KEY"
-    aws.keypair_name = "KEYPAIR NAME"    
-    override.ssh.private_key_path = "PATH TO YOUR PRIVATE KEY"
-    override.vm.communicator = "winrm"
-    override.winrm.username = "Administrator"
+  config.vm.communicator = "winrm"
+  config.winrm.username = "Administrator"
+
+  config.vm.provider "aws" do |aws, override|
+    # Indicate that the password should be fetched and decrypted from AWS   
     override.winrm.password = :aws
-    override.winrm.transport = :ssl
+
+    # private_key_path needed to decrypt the password
+    override.ssh.private_key_path = "PATH TO YOUR PRIVATE KEY"
+
+    # keypair name corresponding to private_key_path
+    aws.keypair_name = "KEYPAIR NAME"
+
+    # Use a security group that allows WinRM port inbound (port 5985)
+    aws.security_groups = ["SOME SECURITY GROUP THAT ALLOWS WINRM INBOUND"]
+
+    # Enable WinRM on the instance
+    aws.user_data = <<-USERDATA
+      <powershell>
+        Enable-PSRemoting -Force
+        netsh advfirewall firewall add rule name="WinRM HTTP" dir=in localport=5985 protocol=TCP action=allow
+      </powershell>
+    USERDATA
   end
 end
-```
-
-## Setting up your server
-
-You'll have to configure WinRM to use basic authentication. As a result, it is recommended that you configure WinRM to use a HTTPS listener.
 
 ```
-winrm quickconfig -q
-winrm set winrm/config/service/auth @{Basic="true"}
-winrm create winrm/config/Listener?Address=*+Transport=HTTPS @{CertificateThumbprint="YOUR CERT THUMBPRINT"}
-```
-
-For self-signed SSL certs, you'll have to configure your Vagrantfile to set `winrm.ssl_peer_verification` to false.
-
-See also:
-
-* [MSDN article about configuring WinRM](http://msdn.microsoft.com/en-us/library/aa384372\(v=vs.85\).aspx)
-* [WinRM gem](https://github.com/WinRb/WinRM/blob/master/README.md#ssl)
 
 ## Contributing
 
