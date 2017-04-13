@@ -1,6 +1,6 @@
 # Vagrant-AWS-WinRM
 
-Adds a capability to the `vagrant-aws` provider to retrieve and use the EC2-generated Administrator password when estabilishing a connection to the instance with the WinRM communicator.
+Adds a capability to the `vagrant-aws` provider to retrieve and use the EC2-generated Administrator password when establishing a connection to the instance with the WinRM communicator.
 
 This allows one to use EC2Config to generate a new Administrator password at provision time, obviating the need to use a hardcoded username and password to connect to Windows boxes provisioned in AWS.
 
